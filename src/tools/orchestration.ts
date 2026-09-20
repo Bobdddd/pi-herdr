@@ -20,7 +20,7 @@ import {
 
 /** AgentSpec fields reused by start_agent and delegate.
  *
- * `agent` is a free string (default "pi") validated against the LIVE `herdr
+ * `agent` is a free string (default "omp") validated against the LIVE `herdr
  * agent` kind list at execute time — a stale hardcoded enum can't track the
  * ~20 kinds herdr 0.7.5 ships, and `agent:"custom"`+`argv` is rejected on
  * 0.7.5. The old `argv`/`custom` launch surface is gone; use `agentArgs` (e.g.
@@ -34,7 +34,7 @@ const agentFields = {
 	agent: Type.Optional(
 		Type.String({
 			description:
-				"Agent kind to launch (default 'pi'), e.g. pi/claude/codex/gemini/cursor/omp/copilot. " +
+				"Agent kind to launch (default 'omp'), e.g. pi/claude/codex/gemini/cursor/omp/copilot. " +
 				"On herdr 0.7.5+ this is passed as `agent start --kind`; an unknown kind returns a " +
 				"VALIDATION_ERROR listing the kinds this herdr supports. To load a local extension " +
 				'pass agentArgs (e.g. ["-e","./src/index.ts"]) instead of the removed `custom`/`argv`.',
@@ -171,7 +171,7 @@ async function startAgentNew(
 	// 0.7.5 `agent start` takes --kind, not a raw command. Validate the kind
 	// against the live `herdr agent` kind list (cached, hardcoded fallback) so an
 	// unknown kind fails fast with a clear error instead of a server-side 400.
-	const kind = (input.agent ?? "pi").toLowerCase();
+	const kind = (input.agent ?? "omp").toLowerCase();
 	const bad = kindError(kind, await getAgentKinds());
 	if (bad) return bad;
 
@@ -184,9 +184,16 @@ async function startAgentNew(
 		input.split ?? "right",
 	];
 	if (input.cwd) splitArgs.push("--cwd", input.cwd);
-	if (input.env)
-		for (const [k, v] of Object.entries(input.env))
-			splitArgs.push("--env", `${k}=${v}`);
+	// Make the spawned agent's pi-herdr self-report (selfreport.ts) match the
+	// requested --kind. Without this, a pi-family host (e.g. omp) defaults its
+	// label to "pi" and herdr's `agent start` rejects with "expected <kind>,
+	// detected pi". User-supplied env wins.
+	const paneEnv: Record<string, string> = {
+		PI_HERDR_AGENT_LABEL: kind,
+		...input.env,
+	};
+	for (const [k, v] of Object.entries(paneEnv))
+		splitArgs.push("--env", `${k}=${v}`);
 	if (input.focus) splitArgs.push("--focus");
 	const splitR = await herdr<unknown>(splitArgs, {
 		timeoutMs: 20_000,
@@ -232,7 +239,15 @@ async function startAgentNew(
 		if (code !== "agent_pane_busy" || Date.now() >= deadline) break;
 		await sleep(250);
 	} while (true);
-	if (!startR.ok) return startR;
+	if (!startR.ok) {
+		// Roll back the pane split in step 1 so a failed `agent start` (e.g. a
+		// kind-detection mismatch) doesn't leave an orphan pane + agent process
+		// behind. Best-effort; the original start error is what we return.
+		await herdr(["pane", "close", paneId], { timeoutMs: 10_000 }).catch(
+			() => {},
+		);
+		return startR;
+	}
 	return {
 		ok: true,
 		data: {
@@ -863,7 +878,7 @@ export function registerOrchestration(pi: ExtensionAPI): void {
 			if (!r.ok) return fail(r);
 			const a = normalizeAgent(r.data.agent);
 			return okText(
-				`Started ${a.agent ?? p.agent ?? "pi"} agent "${a.name ?? name}" in pane ${a.paneId ?? "?"}.`,
+				`Started ${a.agent ?? p.agent ?? "omp"} agent "${a.name ?? name}" in pane ${a.paneId ?? "?"}.`,
 				a,
 			);
 		},
