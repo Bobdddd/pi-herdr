@@ -4,6 +4,24 @@
 [![license](https://img.shields.io/github/license/AndrewJacop/pi-herdr)](./LICENSE)
 [![platform](https://img.shields.io/badge/platform-macOS%20%26%20Windows%20tested-blue)](#platform-support)
 
+> ### 🍴 Fork note
+>
+> This is a fork of **[AndrewJacop/pi-herdr](https://github.com/AndrewJacop/pi-herdr)** (MIT),
+> maintained by [@Bobdddd](https://github.com/Bobdddd), adding **[omp](https://github.com/) support**
+> (omp is a pi-family coding agent). Changes vs upstream:
+>
+> - **omp self-report** — report `idle` on `agent_end` (omp emits no `agent_settled`), so omp
+>   worker panes settle correctly and `herdr_delegate` no longer times out despite finished work.
+> - **kind self-report match** — inject `PI_HERDR_AGENT_LABEL=<kind>` into the spawned pane so an
+>   omp-kind pane isn't rejected with `expected omp, detected pi`.
+> - **pane rollback** — `pane close` the freshly split pane when `agent start` fails, so failures
+>   don't leak orphan panes.
+> - **default kind `omp`** — local preference (not proposed upstream).
+>
+> The three generic omp-compat fixes are proposed upstream in
+> [PR #10](https://github.com/AndrewJacop/pi-herdr/pull/10). Original work and copyright remain
+> © Andrew under the [MIT license](./LICENSE).
+
 A [pi](https://www.npmjs.com/package/@earendil-works/pi-coding-agent) coding-agent
 extension that turns pi into an **orchestrator over a fleet of visible AI agent
 panes** running in [herdr](https://herdr.dev). Spawn another `pi`, `claude`,
