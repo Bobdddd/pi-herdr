@@ -21,6 +21,10 @@
 > The three generic omp-compat fixes are proposed upstream in
 > [PR #10](https://github.com/AndrewJacop/pi-herdr/pull/10). Original work and copyright remain
 > © Andrew under the [MIT license](./LICENSE).
+>
+> 📖 **Guide:** [Turning omp into a self-orchestrating fleet with herdr](./docs/omp-herdr-orchestration.md)
+> — the 3-layer model, coordinator/worker roles ([`roles/`](./roles)), a real
+> auto-decomposition run, and the omp-compat fixes with before/after numbers.
 
 A [pi](https://www.npmjs.com/package/@earendil-works/pi-coding-agent) coding-agent
 extension that turns pi into an **orchestrator over a fleet of visible AI agent
